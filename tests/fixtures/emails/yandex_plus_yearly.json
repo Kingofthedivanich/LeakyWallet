@@ -1,0 +1,13 @@
+{
+  "message_id": "fixture-yandex-1",
+  "sender": "Яндекс Плюс <plus@yandex.ru>",
+  "subject": "Чек об оплате Яндекс Плюс",
+  "snippet": "Списано 2 990,00 руб. за годовую подписку. Продлевается раз в год.",
+  "received_at": "2026-06-01T07:30:00+00:00",
+  "expected": {
+    "amount": "2990.00",
+    "currency": "RUB",
+    "period": "yearly",
+    "service_slug": "yandex-plus"
+  }
+}

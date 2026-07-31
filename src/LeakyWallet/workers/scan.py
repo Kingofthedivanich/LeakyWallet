@@ -6,7 +6,8 @@ from aiogram import Bot
 from LeakyWallet.bot import texts
 from LeakyWallet.db.models.email_account import EmailAccountStatus
 from LeakyWallet.logging import get_logger
-from LeakyWallet.mail.gmail import SUBSCRIPTION_KEYWORDS, GmailClient, load_catalog_domains
+from LeakyWallet.mail.gmail import SUBSCRIPTION_KEYWORDS, GmailClient
+from LeakyWallet.parsing.catalog import all_domains
 from LeakyWallet.repositories.email_accounts import EmailAccountRepository
 from LeakyWallet.repositories.users import UserRepository
 from LeakyWallet.services.email_accounts import EmailAccountService
@@ -66,7 +67,7 @@ async def scan_email_account(ctx: dict[str, Any], email_account_id: int) -> None
 
         client = GmailClient(
             access_token,
-            catalog_domains=load_catalog_domains(),
+            catalog_domains=all_domains(),
             keywords=SUBSCRIPTION_KEYWORDS,
             on_progress=report_progress if is_bootstrap else None,
         )

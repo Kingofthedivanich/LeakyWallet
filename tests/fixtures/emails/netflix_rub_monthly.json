@@ -1,0 +1,13 @@
+{
+  "message_id": "fixture-netflix-1",
+  "sender": "Netflix <billing@netflix.com>",
+  "subject": "Ваш чек Netflix",
+  "snippet": "Списано 799,00 ₽ за ежемесячную подписку Netflix. Дата платежа: 01.08.2026.",
+  "received_at": "2026-08-01T09:15:00+00:00",
+  "expected": {
+    "amount": "799.00",
+    "currency": "RUB",
+    "period": "monthly",
+    "service_slug": "netflix"
+  }
+}

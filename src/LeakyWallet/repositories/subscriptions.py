@@ -28,6 +28,26 @@ class SubscriptionRepository:
         )
         return result.scalars().all()
 
+    async def get_by_user_and_service(self, user_id: int, service_id: int) -> Subscription | None:
+        result = await self._session.execute(
+            select(Subscription).where(
+                Subscription.user_id == user_id, Subscription.service_id == service_id
+            )
+        )
+        return result.scalars().first()
+
+    async def get_by_user_and_custom_name(
+        self, user_id: int, custom_name: str
+    ) -> Subscription | None:
+        result = await self._session.execute(
+            select(Subscription).where(
+                Subscription.user_id == user_id,
+                Subscription.custom_name == custom_name,
+                Subscription.service_id.is_(None),
+            )
+        )
+        return result.scalars().first()
+
     async def create(
         self,
         *,

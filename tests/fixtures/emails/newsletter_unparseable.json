@@ -1,0 +1,8 @@
+{
+  "message_id": "fixture-newsletter-1",
+  "sender": "Netflix <news@netflix.com>",
+  "subject": "New shows added this week",
+  "snippet": "Check out the latest movies and shows now streaming. No charges mentioned here.",
+  "received_at": "2026-08-05T18:00:00+00:00",
+  "expected": null
+}

@@ -1,0 +1,13 @@
+{
+  "message_id": "fixture-apple-1",
+  "sender": "Apple <no_reply@email.apple.com>",
+  "subject": "Ваша квитанция Apple",
+  "snippet": "Оплата подписки iCloud+: 299.00 RUB. Раз в квартал. Дата: 15.03.2026.",
+  "received_at": "2026-03-15T10:00:00+00:00",
+  "expected": {
+    "amount": "299.00",
+    "currency": "RUB",
+    "period": "quarterly",
+    "service_slug": "apple"
+  }
+}

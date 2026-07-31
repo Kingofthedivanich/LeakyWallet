@@ -15,7 +15,6 @@ from LeakyWallet.mail.gmail import (
     GmailClient,
     _build_bootstrap_query,
     _request_with_backoff,
-    load_catalog_domains,
 )
 
 
@@ -46,12 +45,6 @@ def _message_payload(
             ]
         },
     }
-
-
-def test_load_catalog_domains_returns_real_entries() -> None:
-    domains = load_catalog_domains()
-    assert "netflix.com" in domains
-    assert "spotify.com" in domains
 
 
 def test_build_bootstrap_query_includes_senders_and_keywords() -> None:

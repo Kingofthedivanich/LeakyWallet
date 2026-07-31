@@ -1,13 +1,10 @@
 import asyncio
 import datetime
-import functools
 import random
 from collections.abc import Awaitable, Callable, Sequence
-from pathlib import Path
 from typing import Any
 
 import httpx
-import yaml
 
 from LeakyWallet.mail.base import RawMessage
 
@@ -39,20 +36,6 @@ SUBSCRIPTION_KEYWORDS: tuple[str, ...] = (
     "продлена",
     "платёж",
 )
-
-_SERVICES_YAML_PATH = Path(__file__).resolve().parents[3] / "data" / "services.yaml"
-
-
-@functools.lru_cache
-def load_catalog_domains() -> tuple[str, ...]:
-    if not _SERVICES_YAML_PATH.exists():
-        return ()
-    with _SERVICES_YAML_PATH.open(encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
-    domains: list[str] = []
-    for service in data.get("services", []):
-        domains.extend(service.get("domain_patterns", []))
-    return tuple(domains)
 
 
 async def get_profile_email(access_token: str) -> str:

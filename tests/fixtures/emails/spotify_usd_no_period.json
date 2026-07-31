@@ -1,0 +1,13 @@
+{
+  "message_id": "fixture-spotify-1",
+  "sender": "Spotify <no-reply@spotify.com>",
+  "subject": "Your Spotify Premium receipt",
+  "snippet": "You were charged $10.99 for your Spotify Premium plan.",
+  "received_at": "2026-07-15T08:00:00+00:00",
+  "expected": {
+    "amount": "10.99",
+    "currency": "USD",
+    "period": null,
+    "service_slug": "spotify"
+  }
+}

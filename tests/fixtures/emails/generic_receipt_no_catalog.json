@@ -1,0 +1,14 @@
+{
+  "message_id": "fixture-generic-1",
+  "sender": "Acme Cloud Storage <billing@acme-cloud.example>",
+  "subject": "Your receipt from Acme Cloud Storage",
+  "snippet": "Payment charged: €4.99 for your monthly plan. Thank you for your business.",
+  "received_at": "2026-05-10T12:00:00+00:00",
+  "expected": {
+    "amount": "4.99",
+    "currency": "EUR",
+    "period": "monthly",
+    "service_slug": null,
+    "sender_name": "Acme Cloud Storage"
+  }
+}
