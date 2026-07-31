@@ -1,6 +1,9 @@
 from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock
 
+import pytest
 import pytest_asyncio
+from aiogram import Bot
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -34,3 +37,11 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         async with session_factory() as db_session:
             yield db_session
         await outer_transaction.rollback()
+
+
+@pytest_asyncio.fixture
+async def bot(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Bot]:
+    fake_bot = Bot(token="123456:TEST-TOKEN")
+    monkeypatch.setattr(Bot, "__call__", AsyncMock(return_value=None))
+    yield fake_bot
+    await fake_bot.session.close()
