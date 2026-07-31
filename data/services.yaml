@@ -1,3 +1,113 @@
 # Справочник сервисов подписок: домены отправителей, названия, ссылки на отмену.
-# Заполняется на этапе 7.
-services: []
+# domain_patterns используется для (1) построения поискового запроса при
+# bootstrap-скане почты (этап 6) и (2) матчинга письма на сервис при парсинге
+# (этап 7).
+services:
+  - slug: netflix
+    name: Netflix
+    domain_patterns: [netflix.com]
+    cancel_url: https://www.netflix.com/cancelplan
+  - slug: spotify
+    name: Spotify
+    domain_patterns: [spotify.com]
+    cancel_url: https://www.spotify.com/account/subscription/
+  - slug: youtube-premium
+    name: YouTube Premium
+    domain_patterns: [youtube.com, google.com]
+    cancel_url: https://www.youtube.com/paid_memberships
+  - slug: apple
+    name: Apple (iCloud+/Apple One)
+    domain_patterns: [apple.com, email.apple.com]
+    cancel_url: https://support.apple.com/en-us/HT202039
+  - slug: google-one
+    name: Google One
+    domain_patterns: [google.com, one.google.com]
+    cancel_url: https://one.google.com/settings
+  - slug: amazon-prime
+    name: Amazon Prime
+    domain_patterns: [amazon.com]
+    cancel_url: https://www.amazon.com/gp/primecentral
+  - slug: yandex-plus
+    name: Яндекс Плюс
+    domain_patterns: [yandex.ru, yandex.com]
+    cancel_url: https://plus.yandex.ru/settings
+  - slug: kinopoisk
+    name: Кинопоиск
+    domain_patterns: [kinopoisk.ru]
+    cancel_url: https://www.kinopoisk.ru/account/payments/
+  - slug: vk-combo
+    name: VK Combo
+    domain_patterns: [vk.com, mail.vk.com]
+    cancel_url: https://vk.com/combo
+  - slug: disney-plus
+    name: Disney+
+    domain_patterns: [disneyplus.com, disney.com]
+    cancel_url: https://www.disneyplus.com/account/subscription
+  - slug: hbo-max
+    name: HBO Max
+    domain_patterns: [hbomax.com, max.com]
+    cancel_url: https://help.max.com/
+  - slug: adobe
+    name: Adobe Creative Cloud
+    domain_patterns: [adobe.com]
+    cancel_url: https://account.adobe.com/plans
+  - slug: dropbox
+    name: Dropbox
+    domain_patterns: [dropbox.com]
+    cancel_url: https://www.dropbox.com/account/billing
+  - slug: github
+    name: GitHub
+    domain_patterns: [github.com]
+    cancel_url: https://github.com/settings/billing
+  - slug: notion
+    name: Notion
+    domain_patterns: [notion.so, makenotion.com]
+    cancel_url: https://www.notion.so/my-integrations
+  - slug: figma
+    name: Figma
+    domain_patterns: [figma.com]
+    cancel_url: https://www.figma.com/settings
+  - slug: canva
+    name: Canva
+    domain_patterns: [canva.com]
+    cancel_url: https://www.canva.com/settings/billing
+  - slug: playstation-plus
+    name: PlayStation Plus
+    domain_patterns: [playstation.com, sony.com]
+    cancel_url: https://www.playstation.com/en-us/support/subscriptions/
+  - slug: xbox-game-pass
+    name: Xbox Game Pass
+    domain_patterns: [xbox.com, microsoft.com]
+    cancel_url: https://account.microsoft.com/services
+  - slug: steam
+    name: Steam
+    domain_patterns: [steampowered.com, steamgames.com]
+    cancel_url: https://store.steampowered.com/account/
+  - slug: telegram-premium
+    name: Telegram Premium
+    domain_patterns: [telegram.org]
+    cancel_url: https://telegram.org/faq_premium
+  - slug: microsoft-365
+    name: Microsoft 365
+    domain_patterns: [microsoft.com, office.com]
+    cancel_url: https://account.microsoft.com/services
+  - slug: zoom
+    name: Zoom
+    domain_patterns: [zoom.us]
+    cancel_url: https://zoom.us/account/billing
+  - slug: linkedin-premium
+    name: LinkedIn Premium
+    domain_patterns: [linkedin.com]
+    cancel_url: https://www.linkedin.com/premium/manage/
+  - slug: duolingo
+    name: Duolingo
+    domain_patterns: [duolingo.com]
+    cancel_url: https://www.duolingo.com/settings/subscription
+  - slug: nordvpn
+    name: NordVPN
+    domain_patterns: [nordvpn.com]
+    cancel_url: https://my.nordaccount.com/billing/
+  - slug: chatgpt
+    name: ChatGPT Plus
+    domain_patterns: [openai.com]
+    cancel_url: https://chat.openai.com/#settings/Subscription

@@ -6,6 +6,8 @@ from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Update
+from arq import ArqRedis, create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
@@ -34,11 +36,14 @@ bot = (
 dispatcher = create_dispatcher()
 
 _polling_task: asyncio.Task[None] | None = None
+arq_pool: ArqRedis | None = None
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    global _polling_task
+    global _polling_task, arq_pool
+
+    arq_pool = await create_pool(RedisSettings.from_dsn(str(settings.redis_url)))
 
     if bot is not None:
         if settings.telegram_use_webhook and settings.telegram_webhook_url:
@@ -58,6 +63,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         _polling_task.cancel()
     if bot is not None:
         await bot.session.close()
+    if arq_pool is not None:
+        await arq_pool.close()
 
 
 app = FastAPI(title="LeakyWallet", lifespan=lifespan)
@@ -117,10 +124,14 @@ async def oauth_callback(
             )
 
         service = EmailAccountService(EmailAccountRepository(session))
-        await service.connect(user_id=user.id, email=email, tokens=tokens)
+        email_account = await service.connect(user_id=user.id, email=email, tokens=tokens)
         await session.commit()
 
         tg_id = user.tg_id
+        email_account_id = email_account.id
+
+    if arq_pool is not None:
+        await arq_pool.enqueue_job("scan_email_account", email_account_id)
 
     if bot is not None:
         await bot.send_message(tg_id, texts.EMAIL_CONNECTED_DM.format(email=email))

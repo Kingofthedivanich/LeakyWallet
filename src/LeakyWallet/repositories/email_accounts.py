@@ -1,7 +1,9 @@
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from LeakyWallet.db.models.email_account import EmailAccount, EmailProvider
+from LeakyWallet.db.models.email_account import EmailAccount, EmailAccountStatus, EmailProvider
 
 
 class EmailAccountRepository:
@@ -33,3 +35,9 @@ class EmailAccountRepository:
 
     async def delete(self, email_account: EmailAccount) -> None:
         await self._session.delete(email_account)
+
+    async def list_active_ids(self) -> Sequence[int]:
+        result = await self._session.execute(
+            select(EmailAccount.id).where(EmailAccount.status == EmailAccountStatus.ACTIVE)
+        )
+        return result.scalars().all()

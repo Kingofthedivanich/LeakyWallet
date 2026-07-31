@@ -12,24 +12,7 @@ from LeakyWallet.repositories.reminders import ReminderRepository
 from LeakyWallet.repositories.subscriptions import SubscriptionRepository
 from LeakyWallet.repositories.users import UserRepository
 from LeakyWallet.workers.notify import recompute_reminders, send_due_reminders
-
-
-class _SessionFactory:
-    """Wraps the test's transactional session so worker jobs reuse it instead of
-    opening a real connection - keeps the test isolated via the session fixture's
-    outer rollback."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
-
-    def __call__(self) -> "_SessionFactory":
-        return self
-
-    async def __aenter__(self) -> AsyncSession:
-        return self._session
-
-    async def __aexit__(self, *exc_info: object) -> None:
-        return None
+from tests.helpers import SessionFactory as _SessionFactory
 
 
 async def test_recompute_then_send_due_days_before_reminder(
