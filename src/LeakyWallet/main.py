@@ -3,6 +3,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.types import Update
 from fastapi import FastAPI, HTTPException, Request
 
@@ -14,7 +16,14 @@ configure_logging()
 logger = get_logger(__name__)
 
 settings = get_settings()
-bot = Bot(token=settings.telegram_bot_token) if settings.telegram_bot_token else None
+bot = (
+    Bot(
+        token=settings.telegram_bot_token,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    if settings.telegram_bot_token
+    else None
+)
 dispatcher = create_dispatcher()
 
 _polling_task: asyncio.Task[None] | None = None

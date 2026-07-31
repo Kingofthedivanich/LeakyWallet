@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Sequence
 from decimal import Decimal
 
@@ -37,6 +38,7 @@ class SubscriptionRepository:
         source: SubscriptionSource,
         service_id: int | None = None,
         custom_name: str | None = None,
+        next_charge_at: datetime.datetime | None = None,
     ) -> Subscription:
         subscription = Subscription(
             user_id=user_id,
@@ -47,6 +49,7 @@ class SubscriptionRepository:
             period=period,
             status=SubscriptionStatus.ACTIVE,
             source=source,
+            next_charge_at=next_charge_at,
         )
         self._session.add(subscription)
         await self._session.flush()

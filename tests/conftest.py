@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock
 import pytest
 import pytest_asyncio
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -41,7 +43,9 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 
 @pytest_asyncio.fixture
 async def bot(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Bot]:
-    fake_bot = Bot(token="123456:TEST-TOKEN")
+    fake_bot = Bot(
+        token="123456:TEST-TOKEN", default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
     monkeypatch.setattr(Bot, "__call__", AsyncMock(return_value=None))
     yield fake_bot
     await fake_bot.session.close()
