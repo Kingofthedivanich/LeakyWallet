@@ -53,6 +53,8 @@ SETTINGS_TIMEZONE = "settings:timezone"
 SETTINGS_REMINDER_POLICY_PREFIX = "settings:policy:"
 SETTINGS_CURRENCY_PREFIX = "settings:curr:"
 SETTINGS_TIMEZONE_PREFIX = "settings:tz:"
+SETTINGS_EMAIL = "settings:email"
+EMAIL_DISCONNECT = "email:disconnect"
 
 SUBS_ADD = "subs:add"
 SUBS_LIST_PREFIX = "subs:list:"
@@ -182,6 +184,7 @@ def settings_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="🔔 Напоминания", callback_data=SETTINGS_REMINDERS)
     builder.button(text="💱 Валюта", callback_data=SETTINGS_CURRENCY)
     builder.button(text="🕒 Часовой пояс", callback_data=SETTINGS_TIMEZONE)
+    builder.button(text="📧 Почта", callback_data=SETTINGS_EMAIL)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -190,5 +193,15 @@ def reminder_policy_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for label, value in REMINDER_POLICY_CHOICES:
         builder.button(text=label, callback_data=f"{SETTINGS_REMINDER_POLICY_PREFIX}{value}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def email_settings_keyboard(connect_url: str | None) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    if connect_url is not None:
+        builder.button(text="🔗 Подключить Gmail", url=connect_url)
+    else:
+        builder.button(text="🔌 Отключить почту", callback_data=EMAIL_DISCONNECT)
     builder.adjust(1)
     return builder.as_markup()

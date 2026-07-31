@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     fernet_key: str = ""
 
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
+
     sentry_dsn: str | None = None
 
 

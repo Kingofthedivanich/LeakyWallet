@@ -132,3 +132,19 @@ def settings_overview(user: User) -> str:
         f"Часовой пояс: {user.timezone}\n"
         f"Напоминания: {policy_label}"
     )
+
+
+EMAIL_NOT_CONNECTED_STATUS = (
+    "Почта не подключена.\n\n"
+    "Подключим Gmail только на чтение — мы не сможем ничего отправлять "
+    "или удалять от твоего имени."
+)
+EMAIL_CONNECTED_STATUS = "Подключена: {email}"
+EMAIL_NOT_CONFIGURED = "Подключение почты пока не настроено на сервере."
+EMAIL_DISCONNECTED = "Почта отключена, токен удалён."
+
+EMAIL_CALLBACK_SUCCESS_HTML = "<h1>Почта подключена!</h1><p>Вернись в Telegram — бот уже знает.</p>"
+EMAIL_CALLBACK_ERROR_HTML = "<h1>Не удалось подключить почту</h1><p>{detail}</p>"
+EMAIL_CALLBACK_EXPIRED_HTML = "<h1>Ссылка устарела</h1><p>Начни подключение заново в боте.</p>"
+
+EMAIL_CONNECTED_DM = "Готово! Почта {email} подключена."

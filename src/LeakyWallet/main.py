@@ -7,10 +7,17 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Update
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
 
+from LeakyWallet.bot import texts
 from LeakyWallet.bot.dispatcher import create_dispatcher
 from LeakyWallet.config import get_settings
+from LeakyWallet.db.session import async_session_factory
 from LeakyWallet.logging import configure_logging, get_logger
+from LeakyWallet.mail import gmail, oauth
+from LeakyWallet.repositories.email_accounts import EmailAccountRepository
+from LeakyWallet.repositories.users import UserRepository
+from LeakyWallet.services.email_accounts import EmailAccountService
 
 configure_logging()
 logger = get_logger(__name__)
@@ -74,3 +81,48 @@ async def telegram_webhook(request: Request) -> dict[str, str]:
     update = Update.model_validate(await request.json(), context={"bot": bot})
     await dispatcher.feed_update(bot, update)
     return {"status": "ok"}
+
+
+@app.get("/oauth/callback")
+async def oauth_callback(
+    code: str | None = None, state: str | None = None, error: str | None = None
+) -> HTMLResponse:
+    if error is not None:
+        return HTMLResponse(texts.EMAIL_CALLBACK_ERROR_HTML.format(detail=error), status_code=400)
+    if code is None or state is None:
+        return HTMLResponse(
+            texts.EMAIL_CALLBACK_ERROR_HTML.format(detail="missing code or state"),
+            status_code=400,
+        )
+
+    user_id = await oauth.pop_user_id_for_state(state)
+    if user_id is None:
+        return HTMLResponse(texts.EMAIL_CALLBACK_EXPIRED_HTML, status_code=400)
+
+    try:
+        tokens = await oauth.exchange_code_for_tokens(code)
+        email = await gmail.get_profile_email(tokens.access_token)
+    except Exception:
+        logger.exception("oauth token exchange failed", user_id=user_id)
+        return HTMLResponse(
+            texts.EMAIL_CALLBACK_ERROR_HTML.format(detail="Google API error"), status_code=502
+        )
+
+    async with async_session_factory() as session:
+        user_repo = UserRepository(session)
+        user = await user_repo.get_by_id(user_id)
+        if user is None:
+            return HTMLResponse(
+                texts.EMAIL_CALLBACK_ERROR_HTML.format(detail="unknown user"), status_code=404
+            )
+
+        service = EmailAccountService(EmailAccountRepository(session))
+        await service.connect(user_id=user.id, email=email, tokens=tokens)
+        await session.commit()
+
+        tg_id = user.tg_id
+
+    if bot is not None:
+        await bot.send_message(tg_id, texts.EMAIL_CONNECTED_DM.format(email=email))
+
+    return HTMLResponse(texts.EMAIL_CALLBACK_SUCCESS_HTML)
