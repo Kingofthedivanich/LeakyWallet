@@ -34,4 +34,31 @@ make up
 
 ## Статус
 
-Этап 4 — напоминания (cron-джобы, экран настроек в боте).
+Этап 5 — OAuth и хранение токенов (код готов, живой тест на реальном
+Google-аккаунте — см. ниже).
+
+## Подключение Gmail (для живого теста Этапа 5)
+
+1. В [Google Cloud Console](https://console.cloud.google.com/) создайте
+   проект (или используйте существующий).
+2. **APIs & Services → Library** — включите **Gmail API**.
+3. **APIs & Services → OAuth consent screen**:
+   - User type: External.
+   - Publishing status: Testing.
+   - Scopes: добавьте `.../auth/gmail.readonly` (restricted scope).
+   - Test users: добавьте свой Google-аккаунт — без этого вход будет
+     заблокирован, пока приложение не прошло верификацию Google.
+4. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
+   - Application type: Web application.
+   - Authorized redirect URIs: `http://localhost:8000/oauth/callback`
+     (ровно как в `.env`, включая `http://localhost`, без порта‑алиасов).
+5. Скопируйте Client ID и Client Secret в `.env`:
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI=http://localhost:8000/oauth/callback
+   ```
+6. `make up` (пересоберёт контейнер с новым `.env`), пропишите
+   `TELEGRAM_BOT_TOKEN`, поговорите с ботом → Настройки → 📧 Почта →
+   «Подключить Gmail» → войдите тестовым аккаунтом → «Разрешить».
+   Бот должен прислать подтверждение с адресом почты.
