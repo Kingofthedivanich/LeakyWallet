@@ -6,6 +6,7 @@ from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from LeakyWallet.config import get_settings
+from LeakyWallet.db import models  # noqa: F401  registers all mappers on Base.metadata
 from LeakyWallet.db.base import Base
 
 config = context.config

@@ -28,6 +28,9 @@ services:
   app:
     build: .
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-leakywallet}:${POSTGRES_PASSWORD:-leakywallet}@postgres:5432/${POSTGRES_DB:-leakywallet}
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
@@ -38,10 +41,16 @@ services:
     command: ["uvicorn", "LeakyWallet.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - ./src:/app/src
+      - ./tests:/app/tests
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
 
   worker:
     build: .
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-leakywallet}:${POSTGRES_PASSWORD:-leakywallet}@postgres:5432/${POSTGRES_DB:-leakywallet}
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy

@@ -11,7 +11,7 @@ logs:
 	docker compose logs -f
 
 test:
-	pytest
+	docker compose exec -T app pytest
 
 lint:
 	ruff check .
@@ -19,7 +19,7 @@ lint:
 	mypy src
 
 migrate:
-	alembic revision --autogenerate -m "$(m)"
+	docker compose exec -T app alembic revision --autogenerate -m "$(m)"
 
 upgrade:
-	alembic upgrade head
+	docker compose exec -T app alembic upgrade head
