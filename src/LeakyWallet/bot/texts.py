@@ -1,6 +1,8 @@
 from collections.abc import Sequence
 
 from LeakyWallet.db.models.subscription import Subscription
+from LeakyWallet.db.models.user import User
+from LeakyWallet.services.reminders import DAYS_BEFORE_N
 from LeakyWallet.services.subscriptions import SubscriptionSummary
 from LeakyWallet.utils.dates import format_date
 from LeakyWallet.utils.money import format_amount
@@ -68,9 +70,12 @@ def format_subscription_card(subscription: Subscription, timezone: str) -> str:
 
 
 def format_subscriptions_list(
-    subscriptions: Sequence[Subscription], summary: SubscriptionSummary, base_currency: str
+    subscriptions: Sequence[Subscription],
+    summary: SubscriptionSummary,
+    base_currency: str,
+    title: str = SUBSCRIPTIONS_LIST_TITLE,
 ) -> str:
-    lines = [SUBSCRIPTIONS_LIST_TITLE, ""]
+    lines = [title, ""]
     for subscription in subscriptions:
         name = subscription.custom_name or "Подписка"
         period_label = PERIOD_LABELS.get(subscription.period.value, subscription.period.value)
@@ -85,3 +90,45 @@ def format_subscriptions_list(
         lines.append(f"Есть подписки в других валютах ({currencies}) — не учтены в сумме.")
 
     return "\n".join(lines)
+
+
+WEEKLY_DIGEST_HEADER = "🗓 Еженедельный дайджест подписок"
+MONTHLY_REPORT_HEADER = "📊 Отчёт за месяц"
+
+
+def format_days_before_reminder(subscription: Subscription, timezone: str) -> str:
+    name = subscription.custom_name or "Подписка"
+    amount = format_amount(subscription.amount, subscription.currency)
+    next_charge = (
+        format_date(subscription.next_charge_at, timezone)
+        if subscription.next_charge_at is not None
+        else ""
+    )
+    return f"⏰ Через {DAYS_BEFORE_N} дня спишут за «{name}»: {amount} ({next_charge})"
+
+
+SETTINGS_REMINDERS_PROMPT = "Как присылать напоминания?"
+SETTINGS_REMINDER_POLICY_SAVED = "Настройки напоминаний сохранены."
+SETTINGS_CURRENCY_PROMPT = "В какой валюте считать траты?"
+SETTINGS_CURRENCY_SAVED = "Валюта обновлена."
+SETTINGS_TIMEZONE_PROMPT = "В каком часовом поясе ты находишься?"
+SETTINGS_TIMEZONE_SAVED = "Часовой пояс обновлён."
+
+REMINDER_POLICY_LABELS: dict[str, str] = {
+    "off": "выключены",
+    "days_before": f"за {DAYS_BEFORE_N} дня до списания",
+    "weekly_digest": "еженедельный дайджест",
+    "monthly_report": "ежемесячный отчёт",
+}
+
+
+def settings_overview(user: User) -> str:
+    policy_label = REMINDER_POLICY_LABELS.get(
+        user.reminder_policy.value, user.reminder_policy.value
+    )
+    return (
+        f"{MAIN_MENU_SETTINGS}\n\n"
+        f"Валюта: {user.base_currency}\n"
+        f"Часовой пояс: {user.timezone}\n"
+        f"Напоминания: {policy_label}"
+    )

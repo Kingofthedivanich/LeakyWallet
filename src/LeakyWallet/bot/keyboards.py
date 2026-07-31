@@ -5,6 +5,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from LeakyWallet.bot import texts
 from LeakyWallet.db.models.subscription import Subscription, SubscriptionPeriod
+from LeakyWallet.db.models.user import ReminderPolicy
+from LeakyWallet.services.reminders import DAYS_BEFORE_N
 
 TIMEZONE_CHOICES: list[tuple[str, str]] = [
     ("Калининград (UTC+2)", "Europe/Kaliningrad"),
@@ -31,12 +33,26 @@ PERIOD_CHOICES: list[tuple[str, str]] = [
     ("Раз в год", SubscriptionPeriod.YEARLY.value),
 ]
 
+REMINDER_POLICY_CHOICES: list[tuple[str, str]] = [
+    ("Выключены", ReminderPolicy.OFF.value),
+    (f"За {DAYS_BEFORE_N} дня до списания", ReminderPolicy.DAYS_BEFORE.value),
+    ("Еженедельный дайджест", ReminderPolicy.WEEKLY_DIGEST.value),
+    ("Ежемесячный отчёт", ReminderPolicy.MONTHLY_REPORT.value),
+]
+
 PAGE_SIZE = 5
 
 ONBOARDING_TIMEZONE_PREFIX = "onboarding:timezone:"
 ONBOARDING_CURRENCY_PREFIX = "onboarding:currency:"
 MENU_SUBSCRIPTIONS = "menu:subscriptions"
 MENU_SETTINGS = "menu:settings"
+
+SETTINGS_REMINDERS = "settings:reminders"
+SETTINGS_CURRENCY = "settings:currency"
+SETTINGS_TIMEZONE = "settings:timezone"
+SETTINGS_REMINDER_POLICY_PREFIX = "settings:policy:"
+SETTINGS_CURRENCY_PREFIX = "settings:curr:"
+SETTINGS_TIMEZONE_PREFIX = "settings:tz:"
 
 SUBS_ADD = "subs:add"
 SUBS_LIST_PREFIX = "subs:list:"
@@ -59,10 +75,10 @@ EDIT_FIELD_PERIOD = "period"
 EDIT_FIELD_DATE = "date"
 
 
-def timezone_keyboard() -> InlineKeyboardMarkup:
+def timezone_keyboard(prefix: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for label, value in TIMEZONE_CHOICES:
-        builder.button(text=label, callback_data=f"{ONBOARDING_TIMEZONE_PREFIX}{value}")
+        builder.button(text=label, callback_data=f"{prefix}{value}")
     builder.adjust(2)
     return builder.as_markup()
 
@@ -158,4 +174,21 @@ def delete_confirm_keyboard(subscription_id: int) -> InlineKeyboardMarkup:
     )
     builder.button(text="Отмена", callback_data=f"{SUBS_DELETE_CANCEL_PREFIX}{subscription_id}")
     builder.adjust(2)
+    return builder.as_markup()
+
+
+def settings_menu_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🔔 Напоминания", callback_data=SETTINGS_REMINDERS)
+    builder.button(text="💱 Валюта", callback_data=SETTINGS_CURRENCY)
+    builder.button(text="🕒 Часовой пояс", callback_data=SETTINGS_TIMEZONE)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def reminder_policy_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for label, value in REMINDER_POLICY_CHOICES:
+        builder.button(text=label, callback_data=f"{SETTINGS_REMINDER_POLICY_PREFIX}{value}")
+    builder.adjust(1)
     return builder.as_markup()

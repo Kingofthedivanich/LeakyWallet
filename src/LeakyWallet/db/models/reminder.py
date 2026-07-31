@@ -10,14 +10,18 @@ from LeakyWallet.db.models.user import ReminderPolicy
 
 if TYPE_CHECKING:
     from LeakyWallet.db.models.subscription import Subscription
+    from LeakyWallet.db.models.user import User
 
 
 class Reminder(CreatedAtMixin, Base):
     __tablename__ = "reminders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    subscription_id: Mapped[int] = mapped_column(
-        ForeignKey("subscriptions.id", ondelete="CASCADE"), index=True, nullable=False
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    subscription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subscriptions.id", ondelete="CASCADE"), index=True
     )
     kind: Mapped[ReminderPolicy] = mapped_column(
         SqlEnum(
@@ -32,4 +36,5 @@ class Reminder(CreatedAtMixin, Base):
     )
     sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
 
-    subscription: Mapped["Subscription"] = relationship(back_populates="reminders")
+    user: Mapped["User"] = relationship(back_populates="reminders")
+    subscription: Mapped["Subscription | None"] = relationship(back_populates="reminders")

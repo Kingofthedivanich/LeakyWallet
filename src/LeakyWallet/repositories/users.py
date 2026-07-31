@@ -1,7 +1,9 @@
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from LeakyWallet.db.models.user import User
+from LeakyWallet.db.models.user import ReminderPolicy, User
 
 
 class UserRepository:
@@ -20,3 +22,9 @@ class UserRepository:
         self._session.add(user)
         await self._session.flush()
         return user
+
+    async def list_with_reminders_enabled(self) -> Sequence[User]:
+        result = await self._session.execute(
+            select(User).where(User.reminder_policy != ReminderPolicy.OFF)
+        )
+        return result.scalars().all()

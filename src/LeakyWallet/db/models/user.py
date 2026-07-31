@@ -9,6 +9,7 @@ from LeakyWallet.db.base import Base, CreatedAtMixin
 
 if TYPE_CHECKING:
     from LeakyWallet.db.models.email_account import EmailAccount
+    from LeakyWallet.db.models.reminder import Reminder
     from LeakyWallet.db.models.subscription import Subscription
 
 
@@ -40,5 +41,8 @@ class User(CreatedAtMixin, Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     subscriptions: Mapped[list["Subscription"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    reminders: Mapped[list["Reminder"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

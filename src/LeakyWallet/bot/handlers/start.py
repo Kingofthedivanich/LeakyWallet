@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from LeakyWallet.bot import texts
 from LeakyWallet.bot.keyboards import (
-    MENU_SETTINGS,
     ONBOARDING_CURRENCY_PREFIX,
     ONBOARDING_TIMEZONE_PREFIX,
     currency_keyboard,
@@ -23,7 +22,9 @@ router = Router(name="start")
 async def cmd_start(message: Message, state: FSMContext, user: User) -> None:
     await state.set_state(OnboardingStates.choosing_timezone)
     await message.answer(texts.START_GREETING)
-    await message.answer(texts.CHOOSE_TIMEZONE, reply_markup=timezone_keyboard())
+    await message.answer(
+        texts.CHOOSE_TIMEZONE, reply_markup=timezone_keyboard(ONBOARDING_TIMEZONE_PREFIX)
+    )
 
 
 @router.callback_query(
@@ -64,8 +65,3 @@ async def on_currency_chosen(
     await callback.message.edit_text(texts.ONBOARDING_DONE)
     await callback.message.answer(texts.MAIN_MENU_TITLE, reply_markup=main_menu_keyboard())
     await callback.answer()
-
-
-@router.callback_query(F.data == MENU_SETTINGS)
-async def on_main_menu_stub(callback: CallbackQuery) -> None:
-    await callback.answer(texts.FEATURE_NOT_READY, show_alert=True)
