@@ -44,6 +44,12 @@ services:
       - ./tests:/app/tests
       - ./migrations:/app/migrations
       - ./alembic.ini:/app/alembic.ini
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   worker:
     build: .
@@ -59,6 +65,19 @@ services:
     command: ["arq", "LeakyWallet.workers.arq_app.WorkerSettings"]
     volumes:
       - ./src:/app/src
+    healthcheck:
+      # arq only refreshes its Redis health key every health_check_interval
+      # (20s, see workers/arq_app.py) - start_period must clear that or the
+      # first few checks fail for real and the container never leaves
+      # "unhealthy" even though the worker is fine. `arq --check` also
+      # reimports the whole app (aiogram, sqlalchemy...) each run, ~7s -
+      # timeout needs headroom above that.
+      test: ["CMD", "arq", "--check", "LeakyWallet.workers.arq_app.WorkerSettings"]
+      interval: 25s
+      timeout: 15s
+      retries: 5
+      start_period: 40s
+    stop_grace_period: 30s
 
 volumes:
   postgres_data:

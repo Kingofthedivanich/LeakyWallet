@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  # Non-secret: a syntactically valid Fernet key used only by the CI database,
+  # which is thrown away at the end of the job. Never point this at real data.
+  FERNET_KEY: UcR7ncqmylZ9BJ5mN7mes_L3u0QGVQJ0a5P0Ew6T8rM=
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install uv
+      - run: uv pip install --system -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy src
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: leakywallet
+          POSTGRES_PASSWORD: leakywallet
+          POSTGRES_DB: leakywallet
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U leakywallet"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://leakywallet:leakywallet@localhost:5432/leakywallet
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install uv
+      - run: uv pip install --system -e ".[dev]"
+      - run: pytest -q

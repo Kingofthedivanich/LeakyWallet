@@ -1,14 +1,17 @@
 import asyncio
-from collections.abc import AsyncIterator
+import contextlib
+import uuid
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
+import structlog
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Update
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 
 from LeakyWallet.bot import texts
@@ -19,9 +22,11 @@ from LeakyWallet.logging import configure_logging, get_logger
 from LeakyWallet.mail import gmail, oauth
 from LeakyWallet.repositories.email_accounts import EmailAccountRepository
 from LeakyWallet.repositories.users import UserRepository
+from LeakyWallet.sentry import init_sentry
 from LeakyWallet.services.email_accounts import EmailAccountService
 
 configure_logging()
+init_sentry()
 logger = get_logger(__name__)
 
 settings = get_settings()
@@ -61,6 +66,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     if _polling_task is not None:
         _polling_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _polling_task
     if bot is not None:
         await bot.session.close()
     if arq_pool is not None:
@@ -68,6 +75,20 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="LeakyWallet", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def correlation_id_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    try:
+        response = await call_next(request)
+    finally:
+        structlog.contextvars.clear_contextvars()
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 @app.get("/healthz")
