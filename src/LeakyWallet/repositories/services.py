@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from LeakyWallet.db.models.service import Service, ServiceCategory
@@ -41,4 +42,40 @@ class ServiceRepository:
         )
         self._session.add(service)
         await self._session.flush()
+        return service
+
+    async def get_or_create(
+        self,
+        *,
+        slug: str,
+        name: str,
+        domain_patterns: list[str],
+        cancel_url: str | None,
+        category: ServiceCategory = ServiceCategory.OTHER,
+    ) -> Service:
+        existing = await self.get_by_slug(slug)
+        if existing is not None:
+            return existing
+
+        # Two concurrent parse_candidate jobs can both see "no such service"
+        # and both try to create it - the loser hits the unique constraint on
+        # slug. A savepoint contains that failure to just this insert so the
+        # rest of the job's transaction isn't poisoned, then we re-read the
+        # row the winner committed.
+        try:
+            async with self._session.begin_nested():
+                service = Service(
+                    slug=slug,
+                    name=name,
+                    domain_patterns=domain_patterns,
+                    cancel_url=cancel_url,
+                    category=category,
+                )
+                self._session.add(service)
+                await self._session.flush()
+        except IntegrityError:
+            winner = await self.get_by_slug(slug)
+            if winner is None:
+                raise
+            return winner
         return service

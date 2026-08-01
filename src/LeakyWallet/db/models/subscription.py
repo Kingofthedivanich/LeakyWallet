@@ -3,7 +3,7 @@ import enum
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,6 +36,27 @@ class SubscriptionSource(enum.StrEnum):
 
 class Subscription(TimestampMixin, Base):
     __tablename__ = "subscriptions"
+    # Two parse_candidate jobs for the same catalog-matched service (or the
+    # same unmatched sender) can otherwise both find "no existing subscription
+    # yet" and both insert - these partial indexes make the DB reject the
+    # second insert instead of silently duplicating it. Scoped to source=email
+    # only: manual subscriptions may legitimately share a name/service.
+    __table_args__ = (
+        Index(
+            "uq_subscriptions_user_service_email",
+            "user_id",
+            "service_id",
+            unique=True,
+            postgresql_where=text("source = 'email' AND service_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_subscriptions_user_custom_name_email",
+            "user_id",
+            "custom_name",
+            unique=True,
+            postgresql_where=text("source = 'email' AND service_id IS NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(

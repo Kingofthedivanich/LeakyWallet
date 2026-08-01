@@ -11,7 +11,7 @@ logs:
 	docker compose logs -f
 
 test:
-	docker compose exec -T app pytest
+	docker compose exec -T app sh -c 'DATABASE_URL="$${DATABASE_URL%/*}/$${DATABASE_URL##*/}_test" pytest'
 
 lint:
 	ruff check .

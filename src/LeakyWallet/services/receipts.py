@@ -1,4 +1,4 @@
-from LeakyWallet.db.models.subscription import Subscription, SubscriptionPeriod, SubscriptionSource
+from LeakyWallet.db.models.subscription import Subscription, SubscriptionPeriod
 from LeakyWallet.db.models.transaction import Transaction
 from LeakyWallet.parsing import catalog
 from LeakyWallet.parsing.schemas import ParsedReceipt
@@ -52,38 +52,28 @@ class ReceiptService:
         service_id: int | None = None
 
         if receipt.service_slug is not None:
-            service = await self._services.get_by_slug(receipt.service_slug)
-            if service is None:
-                entry = catalog.get_entry(receipt.service_slug)
-                if entry is not None:
-                    service = await self._services.create(
-                        slug=entry.slug,
-                        name=entry.name,
-                        domain_patterns=list(entry.domain_patterns),
-                        cancel_url=entry.cancel_url,
-                        category=entry.category,
-                    )
-            if service is not None:
-                service_id = service.id
-                existing = await self._subscriptions.get_by_user_and_service(user_id, service_id)
-                if existing is not None:
-                    return existing
-        else:
-            existing = await self._subscriptions.get_by_user_and_custom_name(
-                user_id, receipt.sender_name
+            entry = catalog.get_entry(receipt.service_slug)
+            service = (
+                await self._services.get_or_create(
+                    slug=entry.slug,
+                    name=entry.name,
+                    domain_patterns=list(entry.domain_patterns),
+                    cancel_url=entry.cancel_url,
+                    category=entry.category,
+                )
+                if entry is not None
+                else None
             )
-            if existing is not None:
-                return existing
+            service_id = service.id if service is not None else None
 
         period = receipt.period or _DEFAULT_PERIOD
-        return await self._subscriptions.create(
+        return await self._subscriptions.get_or_create_email(
             user_id=user_id,
             service_id=service_id,
+            custom_name=receipt.sender_name,
             amount=receipt.amount,
             currency=receipt.currency,
             period=period,
-            source=SubscriptionSource.EMAIL,
-            custom_name=receipt.sender_name,
             next_charge_at=add_period(receipt.charged_at, period),
         )
 

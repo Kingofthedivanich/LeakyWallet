@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from LeakyWallet.db.models.subscription import (
@@ -74,3 +75,44 @@ class SubscriptionRepository:
         self._session.add(subscription)
         await self._session.flush()
         return subscription
+
+    async def get_or_create_email(
+        self,
+        *,
+        user_id: int,
+        service_id: int | None,
+        custom_name: str,
+        amount: Decimal,
+        currency: str,
+        period: SubscriptionPeriod,
+        next_charge_at: datetime.datetime | None,
+    ) -> Subscription:
+        existing = await self._get_by_user_and_key(user_id, service_id, custom_name)
+        if existing is not None:
+            return existing
+
+        try:
+            async with self._session.begin_nested():
+                subscription = await self.create(
+                    user_id=user_id,
+                    service_id=service_id,
+                    custom_name=custom_name,
+                    amount=amount,
+                    currency=currency,
+                    period=period,
+                    source=SubscriptionSource.EMAIL,
+                    next_charge_at=next_charge_at,
+                )
+        except IntegrityError:
+            winner = await self._get_by_user_and_key(user_id, service_id, custom_name)
+            if winner is None:
+                raise
+            return winner
+        return subscription
+
+    async def _get_by_user_and_key(
+        self, user_id: int, service_id: int | None, custom_name: str
+    ) -> Subscription | None:
+        if service_id is not None:
+            return await self.get_by_user_and_service(user_id, service_id)
+        return await self.get_by_user_and_custom_name(user_id, custom_name)
