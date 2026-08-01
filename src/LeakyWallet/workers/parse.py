@@ -42,9 +42,9 @@ async def parse_candidate(
             snippet=snippet,
             received_at=datetime.datetime.fromisoformat(received_at),
         )
-        receipt = parse_message(message)
+        receipt = await parse_message(message, user_id=email_account.user_id)
         if receipt is None:
-            logger.info("could not parse candidate with rules", message_id=message_id)
+            logger.info("could not parse candidate", message_id=message_id)
             return
 
         receipt_service = ReceiptService(

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = ""
 
+    openrouter_api_key: str = ""
+    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    llm_daily_limit_per_user: int = 20
+
     sentry_dsn: str | None = None
 
 

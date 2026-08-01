@@ -2,9 +2,12 @@ import datetime
 from decimal import Decimal
 from typing import Any
 
+import httpx
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from LeakyWallet.config import get_settings
 from LeakyWallet.db.models.subscription import Subscription
 from LeakyWallet.db.models.transaction import Transaction
 from LeakyWallet.mail.oauth import TokenResponse
@@ -91,6 +94,43 @@ async def test_parse_candidate_ignores_unparseable_message(session: AsyncSession
         "Check out the latest movies and shows now streaming.",
         datetime.datetime(2026, 8, 5, tzinfo=datetime.UTC).isoformat(),
     )
+
+    result = await session.execute(
+        select(Transaction).where(Transaction.email_account_id == email_account_id)
+    )
+    assert result.scalars().all() == []
+
+
+async def test_parse_candidate_survives_invalid_llm_response(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "openrouter_api_key", "test-key")
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: Any) -> Any:
+        class _FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict[str, Any]:
+                return {"choices": [{"message": {"content": "not valid json"}}]}
+
+        return _FakeResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+
+    _, email_account_id = await _make_email_account(session, 980005)
+    ctx: dict[str, Any] = {"session_factory": SessionFactory(session)}
+
+    await parse_candidate(
+        ctx,
+        email_account_id,
+        "msg-parse-5",
+        "Some Obscure SaaS <billing@obscure-saas.example>",
+        "Payment confirmation",
+        "Your card was charged for your recurring plan, thanks for staying with us.",
+        datetime.datetime(2026, 8, 5, tzinfo=datetime.UTC).isoformat(),
+    )  # must not raise
 
     result = await session.execute(
         select(Transaction).where(Transaction.email_account_id == email_account_id)

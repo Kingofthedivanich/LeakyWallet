@@ -28,7 +28,7 @@ def test_fixtures_directory_is_not_empty() -> None:
 
 
 @pytest.mark.parametrize("name,fixture", FIXTURES, ids=[name for name, _ in FIXTURES])
-def test_fixture_parses_as_expected(name: str, fixture: dict[str, Any]) -> None:
+async def test_fixture_parses_as_expected(name: str, fixture: dict[str, Any]) -> None:
     message = RawMessage(
         message_id=fixture["message_id"],
         sender=fixture["sender"],
@@ -37,7 +37,7 @@ def test_fixture_parses_as_expected(name: str, fixture: dict[str, Any]) -> None:
         received_at=datetime.datetime.fromisoformat(fixture["received_at"]),
     )
 
-    result = parse_message(message)
+    result = await parse_message(message, user_id=1)
     expected = fixture["expected"]
 
     if expected is None:
@@ -58,7 +58,7 @@ def test_fixture_parses_as_expected(name: str, fixture: dict[str, Any]) -> None:
         assert result.sender_name == expected["sender_name"]
 
 
-def test_reparsing_same_fixture_is_deterministic() -> None:
+async def test_reparsing_same_fixture_is_deterministic() -> None:
     name, fixture = FIXTURES[0]
     message = RawMessage(
         message_id=fixture["message_id"],
@@ -68,6 +68,6 @@ def test_reparsing_same_fixture_is_deterministic() -> None:
         received_at=datetime.datetime.fromisoformat(fixture["received_at"]),
     )
 
-    first = parse_message(message)
-    second = parse_message(message)
+    first = await parse_message(message, user_id=1)
+    second = await parse_message(message, user_id=1)
     assert first == second
