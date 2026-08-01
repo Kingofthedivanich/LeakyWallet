@@ -131,7 +131,7 @@ make restore f=backups/<file>.sql    # восстановить в текущу�
 
 ### CI
 
-`.github/workflows/ci.yml` на каждый push в `main` и каждый PR: джоба
+`.github/workflows/ci.yml` на каждый push в `master` и каждый PR: джоба
 `lint` (ruff check + ruff format --check + mypy) и джоба `test` (pytest
 против postgres:16-alpine + redis:7-alpine как GitHub Actions services).
 CI не собирает Docker-образ — тесты гоняются напрямую через `pip install
