@@ -28,3 +28,6 @@ class UserRepository:
             select(User).where(User.reminder_policy != ReminderPolicy.OFF)
         )
         return result.scalars().all()
+
+    async def delete(self, user: User) -> None:
+        await self._session.delete(user)

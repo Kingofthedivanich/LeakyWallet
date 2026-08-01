@@ -4,6 +4,8 @@ from pathlib import Path
 
 import yaml
 
+from LeakyWallet.db.models.service import ServiceCategory
+
 _SERVICES_YAML_PATH = Path(__file__).resolve().parents[3] / "data" / "services.yaml"
 
 
@@ -13,6 +15,7 @@ class CatalogEntry:
     name: str
     domain_patterns: tuple[str, ...]
     cancel_url: str | None
+    category: ServiceCategory
 
 
 @functools.lru_cache
@@ -24,12 +27,17 @@ def load_catalog() -> tuple[CatalogEntry, ...]:
 
     entries = []
     for raw in data.get("services", []):
+        try:
+            category = ServiceCategory(raw.get("category", ServiceCategory.OTHER.value))
+        except ValueError:
+            category = ServiceCategory.OTHER
         entries.append(
             CatalogEntry(
                 slug=raw["slug"],
                 name=raw["name"],
                 domain_patterns=tuple(raw.get("domain_patterns", [])),
                 cancel_url=raw.get("cancel_url"),
+                category=category,
             )
         )
     return tuple(entries)

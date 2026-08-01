@@ -46,6 +46,7 @@ ONBOARDING_TIMEZONE_PREFIX = "onboarding:timezone:"
 ONBOARDING_CURRENCY_PREFIX = "onboarding:currency:"
 MENU_SUBSCRIPTIONS = "menu:subscriptions"
 MENU_SETTINGS = "menu:settings"
+MENU_ANALYTICS = "menu:analytics"
 
 SETTINGS_REMINDERS = "settings:reminders"
 SETTINGS_CURRENCY = "settings:currency"
@@ -54,7 +55,13 @@ SETTINGS_REMINDER_POLICY_PREFIX = "settings:policy:"
 SETTINGS_CURRENCY_PREFIX = "settings:curr:"
 SETTINGS_TIMEZONE_PREFIX = "settings:tz:"
 SETTINGS_EMAIL = "settings:email"
+SETTINGS_PRIVACY = "settings:privacy"
 EMAIL_DISCONNECT = "email:disconnect"
+
+PRIVACY_EXPORT = "privacy:export"
+PRIVACY_WIPE = "privacy:wipe"
+PRIVACY_WIPE_CONFIRM = "privacy:wipe:yes"
+PRIVACY_WIPE_CANCEL = "privacy:wipe:no"
 
 SUBS_ADD = "subs:add"
 SUBS_LIST_PREFIX = "subs:list:"
@@ -104,6 +111,7 @@ def period_keyboard(prefix: str) -> InlineKeyboardMarkup:
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=texts.MAIN_MENU_SUBSCRIPTIONS, callback_data=MENU_SUBSCRIPTIONS)
+    builder.button(text=texts.MAIN_MENU_ANALYTICS, callback_data=MENU_ANALYTICS)
     builder.button(text=texts.MAIN_MENU_SETTINGS, callback_data=MENU_SETTINGS)
     builder.adjust(1)
     return builder.as_markup()
@@ -137,12 +145,19 @@ def subscriptions_list_keyboard(
     return builder.as_markup()
 
 
-def subscription_card_keyboard(subscription_id: int) -> InlineKeyboardMarkup:
+def subscription_card_keyboard(
+    subscription_id: int, cancel_url: str | None = None
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    if cancel_url is not None:
+        builder.button(text="🚫 Как отменить", url=cancel_url)
     builder.button(text="✏️ Изменить", callback_data=f"{SUBS_EDIT_PREFIX}{subscription_id}")
     builder.button(text="🗑 Удалить", callback_data=f"{SUBS_DELETE_PREFIX}{subscription_id}")
     builder.button(text="◀️ К списку", callback_data=f"{SUBS_LIST_PREFIX}0")
-    builder.adjust(2, 1)
+    if cancel_url is None:
+        builder.adjust(2, 1)
+    else:
+        builder.adjust(1, 2, 1)
     return builder.as_markup()
 
 
@@ -185,7 +200,25 @@ def settings_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="💱 Валюта", callback_data=SETTINGS_CURRENCY)
     builder.button(text="🕒 Часовой пояс", callback_data=SETTINGS_TIMEZONE)
     builder.button(text="📧 Почта", callback_data=SETTINGS_EMAIL)
+    builder.button(text="🔒 Приватность и данные", callback_data=SETTINGS_PRIVACY)
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def privacy_menu_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="📄 Экспорт в CSV", callback_data=PRIVACY_EXPORT)
+    builder.button(text="🗑 Удалить все данные", callback_data=PRIVACY_WIPE)
+    builder.button(text="◀️ Назад", callback_data=MENU_SETTINGS)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def wipe_confirm_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Да, удалить всё", callback_data=PRIVACY_WIPE_CONFIRM)
+    builder.button(text="Отмена", callback_data=PRIVACY_WIPE_CANCEL)
+    builder.adjust(2)
     return builder.as_markup()
 
 

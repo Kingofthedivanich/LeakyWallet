@@ -1,3 +1,4 @@
+from LeakyWallet.db.models.service import ServiceCategory
 from LeakyWallet.parsing.catalog import all_domains, get_entry, load_catalog, match_sender
 
 
@@ -6,6 +7,17 @@ def test_load_catalog_returns_real_entries() -> None:
     slugs = {entry.slug for entry in catalog}
     assert "netflix" in slugs
     assert "spotify" in slugs
+
+
+def test_load_catalog_assigns_category_to_every_entry() -> None:
+    for entry in load_catalog():
+        assert isinstance(entry.category, ServiceCategory)
+
+
+def test_get_entry_category() -> None:
+    entry = get_entry("netflix")
+    assert entry is not None
+    assert entry.category == ServiceCategory.STREAMING
 
 
 def test_all_domains_flattens_catalog() -> None:

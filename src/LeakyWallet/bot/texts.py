@@ -2,6 +2,7 @@ from collections.abc import Sequence
 
 from LeakyWallet.db.models.subscription import Subscription
 from LeakyWallet.db.models.user import User
+from LeakyWallet.services.analytics import CategoryTotal, MonthPoint, SpendingItem
 from LeakyWallet.services.reminders import DAYS_BEFORE_N
 from LeakyWallet.services.subscriptions import SubscriptionSummary
 from LeakyWallet.utils.dates import format_date
@@ -17,6 +18,7 @@ ONBOARDING_DONE = "Готово! Вот твоё главное меню."
 
 MAIN_MENU_TITLE = "Главное меню"
 MAIN_MENU_SUBSCRIPTIONS = "Мои подписки"
+MAIN_MENU_ANALYTICS = "Аналитика"
 MAIN_MENU_SETTINGS = "Настройки"
 FEATURE_NOT_READY = "Этот раздел ещё в разработке — скоро появится."
 
@@ -153,3 +155,87 @@ SCAN_STARTED = "Начинаю сканировать почту за после
 SCAN_PROGRESS = "Просканировано {done} из {total} писем..."
 SCAN_DONE = "Скан завершён. Найдено кандидатов на подписки: {count}."
 SCAN_FAILED = "Не получилось просканировать почту. Попробуем ещё раз при следующей проверке."
+
+CATEGORY_LABELS: dict[str, str] = {
+    "streaming": "🎬 Стриминг",
+    "music": "🎵 Музыка",
+    "cloud_storage": "☁️ Облако",
+    "productivity": "🛠 Продуктивность",
+    "gaming": "🎮 Игры",
+    "ai": "🤖 ИИ",
+    "education": "🎓 Образование",
+    "utilities": "🔧 Утилиты",
+    "shopping": "🛒 Покупки",
+    "social": "💬 Соцсети",
+    "other": "📦 Другое",
+}
+
+ANALYTICS_TITLE = "📊 Аналитика"
+ANALYTICS_EMPTY = "Пока не по чему считать аналитику — нет ни одной подписки."
+ANALYTICS_TOP_SPENDING_HEADER = "Топ трат в месяц:"
+ANALYTICS_CATEGORY_HEADER = "По категориям (в месяц):"
+ANALYTICS_TREND_HEADER = "Тренд по месяцам:"
+ANALYTICS_DORMANT_HEADER = "😴 Похоже, спят (нет чеков давно, хотя подписка активна):"
+
+
+def format_analytics_overview(
+    *,
+    top_spending: Sequence[SpendingItem],
+    category_breakdown: Sequence[CategoryTotal],
+    trend: Sequence[MonthPoint],
+    dormant: Sequence[Subscription],
+    base_currency: str,
+) -> str:
+    lines = [ANALYTICS_TITLE, ""]
+
+    if not top_spending and not category_breakdown:
+        lines.append(ANALYTICS_EMPTY)
+        return "\n".join(lines)
+
+    lines.append(ANALYTICS_TOP_SPENDING_HEADER)
+    for item in top_spending:
+        name = item.subscription.custom_name or "Подписка"
+        lines.append(f"• {name} — {format_amount(item.monthly_amount, base_currency)}")
+    lines.append("")
+
+    lines.append(ANALYTICS_CATEGORY_HEADER)
+    for category_total in category_breakdown:
+        label = CATEGORY_LABELS.get(category_total.category.value, category_total.category.value)
+        lines.append(f"• {label} — {format_amount(category_total.monthly_amount, base_currency)}")
+    lines.append("")
+
+    lines.append(ANALYTICS_TREND_HEADER)
+    for point in trend:
+        lines.append(f"• {point.month} — {format_amount(point.total, base_currency)}")
+
+    if dormant:
+        lines.append("")
+        lines.append(ANALYTICS_DORMANT_HEADER)
+        for subscription in dormant:
+            name = subscription.custom_name or "Подписка"
+            lines.append(f"• {name}")
+
+    return "\n".join(lines)
+
+
+PRIVACY_TITLE = "🔒 Приватность и данные"
+PRIVACY_WHAT_WE_STORE = (
+    f"{PRIVACY_TITLE}\n\n"
+    "Что мы храним:\n"
+    "• Telegram ID, часовой пояс, валюту и настройки напоминаний.\n"
+    "• Подписки: название, сумму, периодичность, дату списания.\n"
+    "• Историю списаний: сумму, валюту, дату и ID письма (без текста письма).\n"
+    "• Адрес почты и зашифрованный токен доступа, если почта подключена.\n\n"
+    "Мы НЕ храним тела писем — только извлечённые из них поля.\n\n"
+    "Можно выгрузить историю списаний в CSV или удалить все данные насовсем."
+)
+PRIVACY_EXPORT_EMPTY = "Пока нечего экспортировать — нет ни одной транзакции."
+PRIVACY_EXPORT_CAPTION = "Твоя история списаний."
+PRIVACY_EXPORT_FILENAME = "leakywallet_export.csv"
+
+WIPE_CONFIRM_PROMPT = (
+    "Удалить ВСЕ твои данные без возможности восстановления: подписки, историю "
+    "списаний, подключённую почту и токен доступа к ней? Это нельзя отменить."
+)
+WIPE_CANCELLED = "Отменено, данные на месте."
+WIPE_DONE = "Готово. Все твои данные удалены."

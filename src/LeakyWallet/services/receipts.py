@@ -61,6 +61,7 @@ class ReceiptService:
                         name=entry.name,
                         domain_patterns=list(entry.domain_patterns),
                         cancel_url=entry.cancel_url,
+                        category=entry.category,
                     )
             if service is not None:
                 service_id = service.id

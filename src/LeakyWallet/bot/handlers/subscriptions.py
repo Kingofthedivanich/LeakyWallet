@@ -34,6 +34,7 @@ from LeakyWallet.bot.keyboards import (
 from LeakyWallet.bot.states import EditSubscriptionStates
 from LeakyWallet.db.models.subscription import Subscription, SubscriptionPeriod
 from LeakyWallet.db.models.user import User
+from LeakyWallet.repositories.services import ServiceRepository
 from LeakyWallet.repositories.subscriptions import SubscriptionRepository
 from LeakyWallet.services.subscriptions import SubscriptionService
 from LeakyWallet.utils.dates import parse_date_input
@@ -62,6 +63,13 @@ async def build_subscriptions_list_view(
 
 def _subscription_id_from(data: str, prefix: str) -> int:
     return int(data.removeprefix(prefix))
+
+
+async def _cancel_url_for(session: AsyncSession, subscription: Subscription) -> str | None:
+    if subscription.service_id is None:
+        return None
+    service = await ServiceRepository(session).get_by_id(subscription.service_id)
+    return service.cancel_url if service is not None else None
 
 
 async def _get_owned_or_notify(
@@ -115,7 +123,10 @@ async def open_subscription_card(
         return
 
     text = texts.format_subscription_card(subscription, user.timezone)
-    await callback.message.edit_text(text, reply_markup=subscription_card_keyboard(subscription.id))
+    cancel_url = await _cancel_url_for(session, subscription)
+    await callback.message.edit_text(
+        text, reply_markup=subscription_card_keyboard(subscription.id, cancel_url)
+    )
     await callback.answer()
 
 
@@ -168,7 +179,10 @@ async def cancel_delete(callback: CallbackQuery, session: AsyncSession, user: Us
         return
 
     text = texts.format_subscription_card(subscription, user.timezone)
-    await callback.message.edit_text(text, reply_markup=subscription_card_keyboard(subscription.id))
+    cancel_url = await _cancel_url_for(session, subscription)
+    await callback.message.edit_text(
+        text, reply_markup=subscription_card_keyboard(subscription.id, cancel_url)
+    )
     await callback.answer()
 
 
@@ -250,9 +264,10 @@ async def apply_name_edit(
     await service.update(subscription, custom_name=name)
     await state.clear()
     await message.answer(texts.EDIT_DONE)
+    cancel_url = await _cancel_url_for(session, subscription)
     await message.answer(
         texts.format_subscription_card(subscription, user.timezone),
-        reply_markup=subscription_card_keyboard(subscription.id),
+        reply_markup=subscription_card_keyboard(subscription.id, cancel_url),
     )
 
 
@@ -292,9 +307,10 @@ async def apply_currency_edit(
     service = SubscriptionService(SubscriptionRepository(session))
     await service.update(subscription, amount=amount, currency=currency)
     await state.clear()
+    cancel_url = await _cancel_url_for(session, subscription)
     await callback.message.edit_text(
         f"{texts.EDIT_DONE}\n\n{texts.format_subscription_card(subscription, user.timezone)}",
-        reply_markup=subscription_card_keyboard(subscription.id),
+        reply_markup=subscription_card_keyboard(subscription.id, cancel_url),
     )
     await callback.answer()
 
@@ -318,9 +334,10 @@ async def apply_period_edit(
     service = SubscriptionService(SubscriptionRepository(session))
     await service.update(subscription, period=SubscriptionPeriod(period))
     await state.clear()
+    cancel_url = await _cancel_url_for(session, subscription)
     await callback.message.edit_text(
         f"{texts.EDIT_DONE}\n\n{texts.format_subscription_card(subscription, user.timezone)}",
-        reply_markup=subscription_card_keyboard(subscription.id),
+        reply_markup=subscription_card_keyboard(subscription.id, cancel_url),
     )
     await callback.answer()
 
@@ -344,7 +361,8 @@ async def apply_date_edit(
     await service.update(subscription, next_charge_at=next_charge_at)
     await state.clear()
     await message.answer(texts.EDIT_DONE)
+    cancel_url = await _cancel_url_for(session, subscription)
     await message.answer(
         texts.format_subscription_card(subscription, user.timezone),
-        reply_markup=subscription_card_keyboard(subscription.id),
+        reply_markup=subscription_card_keyboard(subscription.id, cancel_url),
     )
