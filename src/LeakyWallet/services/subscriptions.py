@@ -46,7 +46,9 @@ class SubscriptionService:
 
     async def list_visible(self, user_id: int) -> Sequence[Subscription]:
         subscriptions = await self._repository.list_by_user(user_id)
-        return [s for s in subscriptions if s.status != SubscriptionStatus.CANCELLED]
+        return [
+            s for s in subscriptions if s.status != SubscriptionStatus.CANCELLED and s.is_recurring
+        ]
 
     async def get_owned(self, subscription_id: int, user_id: int) -> Subscription | None:
         subscription = await self._repository.get_by_id(subscription_id)

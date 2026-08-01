@@ -2,7 +2,12 @@ from collections.abc import Sequence
 
 from LeakyWallet.db.models.subscription import Subscription
 from LeakyWallet.db.models.user import User
-from LeakyWallet.services.analytics import CategoryTotal, MonthPoint, SpendingItem
+from LeakyWallet.services.analytics import (
+    CategoryTotal,
+    MonthPoint,
+    OneOffCategoryTotal,
+    SpendingItem,
+)
 from LeakyWallet.services.reminders import DAYS_BEFORE_N
 from LeakyWallet.services.subscriptions import SubscriptionSummary
 from LeakyWallet.utils.dates import format_date
@@ -176,6 +181,7 @@ ANALYTICS_TOP_SPENDING_HEADER = "Топ трат в месяц:"
 ANALYTICS_CATEGORY_HEADER = "По категориям (в месяц):"
 ANALYTICS_TREND_HEADER = "Тренд по месяцам:"
 ANALYTICS_DORMANT_HEADER = "😴 Похоже, спят (нет чеков давно, хотя подписка активна):"
+ANALYTICS_ONE_OFF_HEADER = "🧾 Разовые платежи по категориям (не подписки — суммы или даты скачут):"
 
 
 def format_analytics_overview(
@@ -184,11 +190,12 @@ def format_analytics_overview(
     category_breakdown: Sequence[CategoryTotal],
     trend: Sequence[MonthPoint],
     dormant: Sequence[Subscription],
+    one_off: Sequence[OneOffCategoryTotal],
     base_currency: str,
 ) -> str:
     lines = [ANALYTICS_TITLE, ""]
 
-    if not top_spending and not category_breakdown:
+    if not top_spending and not category_breakdown and not one_off:
         lines.append(ANALYTICS_EMPTY)
         return "\n".join(lines)
 
@@ -207,6 +214,14 @@ def format_analytics_overview(
     lines.append(ANALYTICS_TREND_HEADER)
     for point in trend:
         lines.append(f"• {point.month} — {format_amount(point.total, base_currency)}")
+
+    if one_off:
+        lines.append("")
+        lines.append(ANALYTICS_ONE_OFF_HEADER)
+        for one_off_item in one_off:
+            label = CATEGORY_LABELS.get(one_off_item.category.value, one_off_item.category.value)
+            amount = format_amount(one_off_item.total_amount, base_currency)
+            lines.append(f"• {label} — {amount} ({one_off_item.transaction_count} шт.)")
 
     if dormant:
         lines.append("")

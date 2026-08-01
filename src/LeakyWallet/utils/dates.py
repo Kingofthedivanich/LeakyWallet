@@ -45,6 +45,11 @@ def infer_period_from_intervals(
     return SubscriptionPeriod.YEARLY
 
 
+def has_same_day_repeat(charged_dates: Sequence[datetime.datetime]) -> bool:
+    calendar_dates = [value.date() for value in charged_dates]
+    return len(calendar_dates) != len(set(calendar_dates))
+
+
 def parse_date_input(text: str, timezone: str) -> datetime.datetime | None:
     parts = text.strip().split(".")
     if len(parts) != 3:

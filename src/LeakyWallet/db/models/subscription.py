@@ -3,7 +3,7 @@ import enum
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -96,6 +96,11 @@ class Subscription(TimestampMixin, Base):
         ),
         nullable=False,
     )
+    # Self-corrects once 3+ transactions land (services/receipts.py) - same-day
+    # repeat charges or wildly varying amounts mean this is a string of one-off
+    # purchases (e.g. Steam game buys) that happened to match the catalog, not
+    # an actual recurring subscription.
+    is_recurring: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
     service: Mapped["Service | None"] = relationship()

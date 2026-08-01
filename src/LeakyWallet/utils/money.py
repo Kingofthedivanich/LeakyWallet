@@ -1,6 +1,15 @@
+from collections.abc import Sequence
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from LeakyWallet.db.models.subscription import SubscriptionPeriod
+
+# A fixed-price subscription's charges barely move (rounding, one price
+# change). Above this coefficient of variation (stddev / mean), amounts are
+# scattered enough to be one-off purchases rather than recurring billing -
+# calibrated against a live dataset: a real ~$4->$4->$1 GitHub price change
+# sits at ~0.47 CV, unrelated Steam purchases at ~1.6, unrelated Yandex
+# purchases at ~5.6.
+AMOUNT_CV_THRESHOLD = Decimal("0.5")
 
 _MONTHLY_FACTOR: dict[SubscriptionPeriod, Decimal] = {
     SubscriptionPeriod.WEEKLY: Decimal("52") / Decimal("12"),
@@ -27,6 +36,15 @@ def yearly_equivalent(amount: Decimal, period: SubscriptionPeriod) -> Decimal:
 
 def format_amount(amount: Decimal, currency: str) -> str:
     return f"{amount:.2f} {currency}"
+
+
+def amounts_are_consistent(amounts: Sequence[Decimal]) -> bool:
+    mean = sum(amounts, Decimal("0")) / len(amounts)
+    if mean == 0:
+        return True
+    variance = sum(((a - mean) ** 2 for a in amounts), Decimal("0")) / len(amounts)
+    coefficient_of_variation = variance.sqrt() / mean
+    return coefficient_of_variation <= AMOUNT_CV_THRESHOLD
 
 
 def parse_amount(text: str) -> Decimal | None:

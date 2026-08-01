@@ -221,3 +221,67 @@ async def test_find_dormant_ignores_recently_charged_and_manual_subscriptions(
     dormant = await analytics.find_dormant(user.id, now)
 
     assert dormant == []
+
+
+async def test_one_off_spending_groups_irregular_subscriptions_by_category(
+    session: AsyncSession,
+) -> None:
+    users = UserRepository(session)
+    user = await users.create(tg_id=970107, timezone="UTC", base_currency="RUB")
+
+    services = ServiceRepository(session)
+    gaming_service = await services.create(
+        slug="test-gaming-store",
+        name="Test Gaming Store",
+        domain_patterns=["testgamingstore.example"],
+        cancel_url=None,
+        category=ServiceCategory.GAMING,
+    )
+
+    subscriptions = SubscriptionRepository(session)
+    recurring = await subscriptions.create(
+        user_id=user.id,
+        amount=Decimal("299.00"),
+        currency="RUB",
+        period=SubscriptionPeriod.MONTHLY,
+        source=SubscriptionSource.EMAIL,
+        custom_name="Real subscription",
+    )
+    irregular = await subscriptions.create(
+        user_id=user.id,
+        service_id=gaming_service.id,
+        amount=Decimal("100.00"),
+        currency="RUB",
+        period=SubscriptionPeriod.WEEKLY,
+        source=SubscriptionSource.EMAIL,
+    )
+    irregular.is_recurring = False
+    await session.flush()
+
+    transactions = TransactionRepository(session)
+    await transactions.create(
+        subscription_id=recurring.id,
+        charged_at=datetime.datetime(2026, 6, 1, tzinfo=datetime.UTC),
+        amount=Decimal("299.00"),
+        currency="RUB",
+    )
+    await transactions.create(
+        subscription_id=irregular.id,
+        charged_at=datetime.datetime(2026, 6, 1, tzinfo=datetime.UTC),
+        amount=Decimal("100.00"),
+        currency="RUB",
+    )
+    await transactions.create(
+        subscription_id=irregular.id,
+        charged_at=datetime.datetime(2026, 6, 5, tzinfo=datetime.UTC),
+        amount=Decimal("250.00"),
+        currency="RUB",
+    )
+
+    analytics = await _make_service(session)
+    one_off = await analytics.one_off_spending(user.id, "RUB")
+
+    assert len(one_off) == 1
+    assert one_off[0].category == ServiceCategory.GAMING
+    assert one_off[0].total_amount == Decimal("350.00")
+    assert one_off[0].transaction_count == 2

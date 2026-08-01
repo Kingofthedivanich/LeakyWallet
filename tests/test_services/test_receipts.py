@@ -189,3 +189,115 @@ async def test_period_self_corrects_after_second_transaction(session: AsyncSessi
     await session.refresh(subscription)
     assert subscription.period == SubscriptionPeriod.QUARTERLY
     assert subscription.next_charge_at == datetime.datetime(2026, 7, 1, tzinfo=datetime.UTC)
+
+
+async def test_is_recurring_stays_true_for_consistent_fixed_price_subscription(
+    session: AsyncSession,
+) -> None:
+    user_id, email_account_id = await _make_email_account(session, 970006)
+    service = await _make_receipt_service(session)
+
+    subscription_id: int | None = None
+    for i, month in enumerate((1, 2, 3)):
+        transaction = await service.record_receipt(
+            user_id=user_id,
+            email_account_id=email_account_id,
+            message_id=f"msg-6{i}",
+            receipt=_receipt(
+                amount="299.00", charged_at=datetime.datetime(2026, month, 1, tzinfo=datetime.UTC)
+            ),
+        )
+        assert transaction is not None
+        subscription_id = transaction.subscription_id
+
+    subscription = await SubscriptionRepository(session).get_by_id(subscription_id)
+    assert subscription is not None
+    assert subscription.is_recurring is True
+
+
+async def test_is_recurring_flips_false_for_scattered_amounts(session: AsyncSession) -> None:
+    user_id, email_account_id = await _make_email_account(session, 970007)
+    service = await _make_receipt_service(session)
+
+    amounts = ["1.64", "129.00", "2.15"]
+    subscription_id: int | None = None
+    for i, (amount, month) in enumerate(zip(amounts, (1, 2, 3), strict=True)):
+        transaction = await service.record_receipt(
+            user_id=user_id,
+            email_account_id=email_account_id,
+            message_id=f"msg-7{i}",
+            receipt=_receipt(
+                amount=amount,
+                charged_at=datetime.datetime(2026, month, 1, tzinfo=datetime.UTC),
+                sender_name="Some Aggregator",
+                service_slug=None,
+            ),
+        )
+        assert transaction is not None
+        subscription_id = transaction.subscription_id
+
+    subscription = await SubscriptionRepository(session).get_by_id(subscription_id)
+    assert subscription is not None
+    assert subscription.is_recurring is False
+
+
+async def test_is_recurring_flips_false_for_same_day_repeat_charges(
+    session: AsyncSession,
+) -> None:
+    user_id, email_account_id = await _make_email_account(session, 970008)
+    service = await _make_receipt_service(session)
+
+    same_day = datetime.datetime(2026, 3, 1, tzinfo=datetime.UTC)
+    charge_times = [
+        same_day,
+        same_day + datetime.timedelta(hours=2),
+        same_day + datetime.timedelta(days=30),
+    ]
+    subscription_id: int | None = None
+    for i, charged_at in enumerate(charge_times):
+        transaction = await service.record_receipt(
+            user_id=user_id,
+            email_account_id=email_account_id,
+            message_id=f"msg-8{i}",
+            receipt=_receipt(
+                amount="199.00",
+                charged_at=charged_at,
+                sender_name="Steam-like Store",
+                service_slug=None,
+            ),
+        )
+        assert transaction is not None
+        subscription_id = transaction.subscription_id
+
+    subscription = await SubscriptionRepository(session).get_by_id(subscription_id)
+    assert subscription is not None
+    assert subscription.is_recurring is False
+
+
+async def test_is_recurring_stays_true_below_minimum_sample_size(
+    session: AsyncSession,
+) -> None:
+    user_id, email_account_id = await _make_email_account(session, 970009)
+    service = await _make_receipt_service(session)
+
+    # Only 2 wildly different charges - not enough evidence yet, per
+    # _MIN_TRANSACTIONS_FOR_RECURRING_CHECK, to call it a one-off stream.
+    for i, amount in enumerate(("10.00", "9999.00")):
+        transaction = await service.record_receipt(
+            user_id=user_id,
+            email_account_id=email_account_id,
+            message_id=f"msg-9{i}",
+            receipt=_receipt(
+                amount=amount,
+                charged_at=datetime.datetime(2026, 1, 1 + i, tzinfo=datetime.UTC),
+                sender_name="Too Early To Tell",
+                service_slug=None,
+            ),
+        )
+        assert transaction is not None
+
+    subscription = await SubscriptionRepository(session).get_by_user_and_custom_name(
+        user_id, "Too Early To Tell"
+    )
+    assert subscription is not None
+    assert subscription.is_recurring is True

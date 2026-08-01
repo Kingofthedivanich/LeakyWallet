@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from LeakyWallet.db.models.subscription import Subscription, SubscriptionPeriod
 from LeakyWallet.db.models.transaction import Transaction
 from LeakyWallet.parsing import catalog
@@ -5,12 +7,18 @@ from LeakyWallet.parsing.schemas import ParsedReceipt
 from LeakyWallet.repositories.services import ServiceRepository
 from LeakyWallet.repositories.subscriptions import SubscriptionRepository
 from LeakyWallet.repositories.transactions import TransactionRepository
-from LeakyWallet.utils.dates import add_period, infer_period_from_intervals
+from LeakyWallet.utils.dates import add_period, has_same_day_repeat, infer_period_from_intervals
+from LeakyWallet.utils.money import amounts_are_consistent
 
 # Most real-world subscriptions bill monthly; used only when the receipt text
 # doesn't state a period explicitly. Self-corrects via _refine_period once a
 # second transaction lands and the actual interval can be measured.
 _DEFAULT_PERIOD = SubscriptionPeriod.MONTHLY
+
+# Below this many transactions, amount/date variance is too noisy to tell a
+# recurring subscription from a couple of one-off purchases that happened to
+# match the same sender/service.
+_MIN_TRANSACTIONS_FOR_RECURRING_CHECK = 3
 
 
 class ReceiptService:
@@ -43,7 +51,9 @@ class ReceiptService:
             message_id=message_id,
         )
 
-        await self._refine_period(subscription)
+        all_transactions = await self._transactions.list_by_subscription(subscription.id)
+        self._refine_period(subscription, all_transactions)
+        self._refine_recurring_flag(subscription, all_transactions)
         return transaction
 
     async def _find_or_create_subscription(
@@ -77,8 +87,9 @@ class ReceiptService:
             next_charge_at=add_period(receipt.charged_at, period),
         )
 
-    async def _refine_period(self, subscription: Subscription) -> None:
-        transactions = await self._transactions.list_by_subscription(subscription.id)
+    def _refine_period(
+        self, subscription: Subscription, transactions: Sequence[Transaction]
+    ) -> None:
         if len(transactions) < 2:
             return
 
@@ -89,3 +100,16 @@ class ReceiptService:
         subscription.period = inferred
         latest_charge = max(t.charged_at for t in transactions)
         subscription.next_charge_at = add_period(latest_charge, inferred)
+
+    def _refine_recurring_flag(
+        self, subscription: Subscription, transactions: Sequence[Transaction]
+    ) -> None:
+        if len(transactions) < _MIN_TRANSACTIONS_FOR_RECURRING_CHECK:
+            return
+        if not subscription.is_recurring:
+            return  # already flagged - no way back without a manual edit
+
+        charged_dates = [t.charged_at for t in transactions]
+        amounts = [t.amount for t in transactions]
+        if has_same_day_repeat(charged_dates) or not amounts_are_consistent(amounts):
+            subscription.is_recurring = False

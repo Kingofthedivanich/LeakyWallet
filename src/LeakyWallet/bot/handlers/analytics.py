@@ -28,12 +28,14 @@ async def open_analytics(callback: CallbackQuery, session: AsyncSession, user: U
     category_breakdown = await service.category_breakdown(user.id, user.base_currency)
     trend = await service.monthly_trend(user.id, user.base_currency, now=now)
     dormant = await service.find_dormant(user.id, now)
+    one_off = await service.one_off_spending(user.id, user.base_currency)
 
     text = texts.format_analytics_overview(
         top_spending=top_spending,
         category_breakdown=category_breakdown,
         trend=trend,
         dormant=dormant,
+        one_off=one_off,
         base_currency=user.base_currency,
     )
     await callback.message.answer(text)

@@ -31,6 +31,13 @@ class MonthPoint:
     total: Decimal
 
 
+@dataclass(frozen=True)
+class OneOffCategoryTotal:
+    category: ServiceCategory
+    total_amount: Decimal
+    transaction_count: int
+
+
 class AnalyticsService:
     def __init__(
         self,
@@ -49,7 +56,9 @@ class AnalyticsService:
         return [
             s
             for s in subscriptions
-            if s.status == SubscriptionStatus.ACTIVE and s.currency == base_currency
+            if s.status == SubscriptionStatus.ACTIVE
+            and s.currency == base_currency
+            and s.is_recurring
         ]
 
     async def top_spending(
@@ -110,6 +119,33 @@ class AnalyticsService:
 
         return [MonthPoint(month=key, total=totals[key]) for key in month_keys]
 
+    async def one_off_spending(self, user_id: int, base_currency: str) -> list[OneOffCategoryTotal]:
+        subscriptions = await self._subscriptions.list_by_user(user_id)
+        irregular = [s for s in subscriptions if not s.is_recurring and s.currency == base_currency]
+        service_ids = {s.service_id for s in irregular if s.service_id is not None}
+        services = await self._services.list_by_ids(list(service_ids))
+        category_by_service_id = {service.id: service.category for service in services}
+
+        totals: dict[ServiceCategory, Decimal] = {}
+        counts: dict[ServiceCategory, int] = {}
+        for subscription in irregular:
+            category = ServiceCategory.OTHER
+            if subscription.service_id is not None:
+                category = category_by_service_id.get(
+                    subscription.service_id, ServiceCategory.OTHER
+                )
+            transactions = await self._transactions.list_by_subscription(subscription.id)
+            subtotal = sum((t.amount for t in transactions), Decimal("0"))
+            totals[category] = totals.get(category, Decimal("0")) + subtotal
+            counts[category] = counts.get(category, 0) + len(transactions)
+
+        breakdown = [
+            OneOffCategoryTotal(category=c, total_amount=a, transaction_count=counts[c])
+            for c, a in totals.items()
+        ]
+        breakdown.sort(key=lambda item: item.total_amount, reverse=True)
+        return breakdown
+
     async def find_dormant(self, user_id: int, now: datetime.datetime) -> list[Subscription]:
         subscriptions = await self._subscriptions.list_by_user(user_id)
         dormant = []
@@ -117,6 +153,7 @@ class AnalyticsService:
             if (
                 subscription.status != SubscriptionStatus.ACTIVE
                 or subscription.source != SubscriptionSource.EMAIL
+                or not subscription.is_recurring
             ):
                 continue
 
